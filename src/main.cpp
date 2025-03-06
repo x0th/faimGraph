@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
 	}
   std::cout << "########## faimGraph Demo ##########" << std::endl;
 
+        cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * MEGABYTE);
+
 	// Query device properties
 	//queryAndPrintDeviceProperties();
   ConfigurationParser config_parser(argv[1]);
@@ -219,7 +221,7 @@ void testrunImplementation(const std::shared_ptr<Config>& config, const std::uni
           //
           start_clock(ce_start, ce_stop);
           
-			 faimGraph->edgeInsertion();
+	        	 faimGraph->edgeInsertion();
           
           time_diff = end_clock(ce_start, ce_stop);
           if(i >= warmup_rounds)
@@ -257,13 +259,13 @@ void testrunImplementation(const std::shared_ptr<Config>& config, const std::uni
 				faimGraph->edge_update_manager->receiveEdgeUpdates(std::move(realistic_edge_updates), EdgeUpdateVersion::GENERAL);
           }
           
-          start_clock(ce_start, ce_stop);
-          
-			 faimGraph->edgeDeletion();
-          
-          time_diff = end_clock(ce_start, ce_stop);
-          if(i >= warmup_rounds)
-            time_elapsed_edgedeletion += time_diff;
+          //start_clock(ce_start, ce_stop);
+          //
+	  //      	 faimGraph->edgeDeletion();
+          //
+          //time_diff = end_clock(ce_start, ce_stop);
+          //if(i >= warmup_rounds)
+          //  time_elapsed_edgedeletion += time_diff;
 
           //------------------------------------------------------------------------------
           // Verification phase
@@ -296,6 +298,8 @@ void testrunImplementation(const std::shared_ptr<Config>& config, const std::uni
           }
         }
 
+        //printf("clear\n");
+        faimGraph->memory_manager->template clear<VertexDataType, EdgeDataType>();
         // Let's retrieve a fresh graph
         parser->getFreshGraph();
       }
@@ -321,6 +325,7 @@ void testrunImplementation(const std::shared_ptr<Config>& config, const std::uni
     std::cout << "################################################################" << std::endl;
     std::cout << "################################################################" << std::endl;
     std::cout << "################################################################" << std::endl;
+
   }
   // Write Performance Output into CSV-File
   if (testrun->params->performance_output_ == ConfigurationParameters::PerformanceOutput::CSV)

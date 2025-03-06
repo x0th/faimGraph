@@ -212,7 +212,7 @@ void MemoryManager::setEdgesPerBlock()
   }
   else
   {
-    edges_per_page = (page_size - (number_of_indices * sizeof(index_t))) / sizeof(EdgeData);
+    edges_per_page = (page_size - (number_of_indices * sizeof(EdgeData *))) / sizeof(EdgeData);
   }
 }
 

@@ -510,27 +510,36 @@ namespace faimGraphEdgeInsertion
 		if (!edge_inserted && !duplicate_found)
 		{
 			// Set index to next block and then reset adjacency list and insert edge
-			index_t edge_block_index;
-			index_t* edge_block_index_ptr = adjacency_iterator.getPageIndexPtr(edges_per_page);
-	#ifdef QUEUING
-			if (memory_manager->d_page_queue.dequeue(edge_block_index))
-			{
-			// We got something from the queue
-			*edge_block_index_ptr = edge_block_index;
-			}
-			else
-			{
-	#endif
-			// Queue is currently empty
-			*edge_block_index_ptr = atomicAdd(&(memory_manager->next_free_page), 1);
-	#ifdef ACCESS_METRICS
-			atomicAdd(&(memory_manager->access_counter), 1);
-	#endif
-	#ifdef QUEUING
-			}
-	#endif
+//			index_t edge_block_index;
+//			index_t* edge_block_index_ptr = adjacency_iterator.getPageIndexPtr(edges_per_page);
+//	#ifdef QUEUING
+//			if (memory_manager->d_page_queue.dequeue(edge_block_index))
+//			{
+//			// We got something from the queue
+//			*edge_block_index_ptr = edge_block_index;
+//			}
+//			else
+//			{
+//	#endif
+//			// Queue is currently empty
+//			*edge_block_index_ptr = atomicAdd(&(memory_manager->next_free_page), 1);
+//	#ifdef ACCESS_METRICS
+//			atomicAdd(&(memory_manager->access_counter), 1);
+//	#endif
+//	#ifdef QUEUING
+//			}
+//	#endif
 
-			adjacency_iterator.setIterator(pageAccess<EdgeDataType>(memory, *edge_block_index_ptr, page_size, memory_manager->start_index));
+			//adjacency_iterator.setIterator(pageAccess<EdgeDataType>(memory, *edge_block_index_ptr, page_size, memory_manager->start_index));
+
+                        //index_t next_block_idx = atomicAdd(&(memory_manager->next_free_page), 1);
+                        //EdgeDataType *new_adjacency_page = pageAccess<EdgeDataType>(memory, next_block_idx, page_size, memory_manager->start_index);
+                        EdgeDataType *new_adjacency_page = (EdgeDataType *) malloc(page_size);
+                        //printf("new page: %p\n", (void *) new_adjacency_page);
+
+                        *((EdgeDataType **) adjacency_iterator.getIterator()) = new_adjacency_page;
+                        adjacency_iterator.setIterator(new_adjacency_page);
+
 			updateAdjacency(adjacency_iterator.getIterator(), edge_update, edges_per_page);
 
 			vertices[edge_update.source].neighbours += 1;

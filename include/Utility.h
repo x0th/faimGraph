@@ -392,8 +392,12 @@ __forceinline__ __device__ void setupVertex(VertexDataSemantic& vertex, VertexUp
 template <typename EdgeDataType>
 __forceinline__ __device__ void pointerHandlingSetup(EdgeDataType*& adjacency_list, memory_t* memory, vertex_t& block_index, int page_size, vertex_t edges_per_page, uint64_t start_index)
 {
-  *((index_t*)adjacency_list) = ++block_index;
-  adjacency_list = pageAccess<EdgeDataType>(memory, block_index, page_size, start_index);
+  //*((index_t*)adjacency_list) = ++block_index;
+  //adjacency_list = pageAccess<EdgeDataType>(memory, block_index, page_size, start_index);
+    ++block_index;
+    EdgeDataType *next_block = pageAccess<EdgeDataType>(memory, block_index, page_size, start_index);
+    *((EdgeDataType **) adjacency_list) = next_block;
+    adjacency_list = next_block;
 }
 
 template <typename EdgeDataType>
@@ -455,7 +459,8 @@ __forceinline__ __device__ void pointerHandlingSetupDoubleLinked<EdgeDataSemanti
 template <typename EdgeDataType>
 __forceinline__ __device__ __host__ void pointerHandlingTraverse(EdgeDataType*& adjacency_list, memory_t* memory, int page_size, vertex_t edges_per_page, uint64_t& start_index)
 {
-  adjacency_list = pageAccess<EdgeDataType>(memory, *((index_t*)adjacency_list), page_size, start_index);
+  //adjacency_list = pageAccess<EdgeDataType>(memory, *((index_t*)adjacency_list), page_size, start_index);
+  adjacency_list = *((EdgeDataType **) adjacency_list);
 }
 
 template <>

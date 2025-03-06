@@ -19,7 +19,8 @@ template void faimGraph<VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPAT
 template CSR<float> faimGraph <VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE>::reinitializeFaimGraph(float overallocation_factor); \
 template std::unique_ptr<aimGraphCSR> faimGraph <VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE>::verifyGraphStructure (std::unique_ptr<MemoryManager>& memory_manager); \
 template void faimGraph<VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE>::initializeMemory(vertex_t* d_offset, vertex_t* d_adjacency, int number_vertices); \
-template bool faimGraph<VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE>::compareGraphs(std::unique_ptr<GraphParser>& graph_parser, std::unique_ptr<aimGraphCSR>& verify_graph, bool duplicate_check);
+template bool faimGraph<VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE>::compareGraphs(std::unique_ptr<GraphParser>& graph_parser, std::unique_ptr<aimGraphCSR>& verify_graph, bool duplicate_check); \
+template void MemoryManager::clear<VERTEXDATATYPE, EDGEDATATYPE>();
 
 #define FAIMGRAPHMATRIX(VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE) \
 template void faimGraph<VERTEXDATATYPE, VERTEXUPDATETYPE, EDGEDATATYPE, EDGEUPATETYPE>::initializefaimGraphMatrix(std::unique_ptr<GraphParser>& graph_parser, unsigned int vertex_offset); \

@@ -98,6 +98,33 @@ namespace faimGraphMemoryManager
 
 	return;
 	}
+
+        template <typename VertexDataType, typename EdgeDataType>
+        __global__ void d_freeExternalAdjacency(MemoryManager *memory_manager, void *memory, void *memory_end, vertex_t number_vertices) {
+            int tid = threadIdx.x + blockIdx.x * blockDim.x;
+            if (tid >= number_vertices) return;
+
+            volatile VertexDataType *vertices = (VertexDataType *) memory;
+
+            int capacity = vertices[tid].capacity;
+            vertex_t edges_per_page = memory_manager->edges_per_page;
+            int num_blocks = capacity / edges_per_page;
+
+            EdgeDataType *current_block = pageAccess<EdgeDataType>((memory_t *) memory, vertices[tid].mem_index, memory_manager->page_size, memory_manager->start_index);
+            EdgeDataType *next_block;
+
+            for (int i = 0; i < num_blocks; ++i) {
+                //if ((current_block + edges_per_page) != nullptr && i != num_blocks - 1) {
+                if (i != num_blocks - 1) {
+                    next_block = *((EdgeDataType **) (current_block + edges_per_page));
+                }
+                if ((void *) current_block < memory || (void *) current_block > memory_end) {
+                    //printf("%p\n", (void *) current_block);
+                    free(current_block);
+                }
+                current_block = next_block;
+            }
+        }
 }
 
 
@@ -236,4 +263,11 @@ void MemoryManager::workBalanceCalculation(vertex_t* d_accumulated_page_count, v
 
   faimGraphMemoryManager::d_workBalanceCalculation << < grid_size, block_size >> > ((MemoryManager*)d_memory, d_accumulated_page_count, page_count, d_vertex_indices, d_page_per_vertex_indices);
   return;
+}
+
+template <typename VertexDataType, typename EdgeDataType>
+void MemoryManager::clear() {
+    int block_size = 256;
+    int grid_size = (number_vertices / block_size) + 1;
+    faimGraphMemoryManager::d_freeExternalAdjacency<VertexDataType, EdgeDataType> <<<grid_size, block_size>>>((MemoryManager *)d_memory, d_data, (void *) (((size_t) d_data) + total_memory), number_vertices);
 }
