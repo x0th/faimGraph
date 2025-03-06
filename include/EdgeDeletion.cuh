@@ -515,6 +515,7 @@ namespace faimGraphEdgeDeletion
 	template <typename VertexDataType, typename EdgeDataType, typename UpdateDataType>
 	__global__ void d_edgeDeletion(MemoryManager* memory_manager,
 								memory_t* memory,
+                                                                memory_t* memory_end,
 								int page_size,
 								UpdateDataType* edge_update_data,
 								int batch_size,
@@ -574,14 +575,15 @@ namespace faimGraphEdgeDeletion
 			if (neighbours > 0)
 			{
 			vertex_t shuffle_index = neighbours - 1;
-			index_t edge_block_index = INVALID_INDEX;
+			//index_t edge_block_index = INVALID_INDEX;
+                        EdgeDataType *edge_block = nullptr;
 			for (int i = 0; i < neighbours; ++i)
 			{
 				vertex_t adj_dest = adjacency_iterator.getDestination();
 				if (adj_dest == edge_update.update.destination)
 				{
 				// Move to the last item in the adjacency
-				search_iterator.advanceIteratorToIndex(edges_per_page, memory, page_size, memory_manager->start_index, edge_block_index, shuffle_index);
+                                search_iterator.advanceIteratorToIndex(edges_per_page, memory, page_size, memory_manager->start_index, edge_block, shuffle_index);
 
 				// Copy last value onto the value that should be deleted and delete last value
 				adjacency_iterator.setDestination(search_iterator.getDestinationAt(shuffle_index));
@@ -592,18 +594,20 @@ namespace faimGraphEdgeDeletion
 				if ((shuffle_index) == 0)
 				{
 					// We can return this block to the queue if it's not INVALID (we always want to have one remaining block)
-					if (edge_block_index != INVALID_INDEX)
+					if (edge_block != nullptr && ((memory_t *) edge_block < memory || (memory_t *) edge_block > memory_end))
 					{
-	#ifdef QUEUING
-					if (memory_manager->d_page_queue.enqueue(edge_block_index))
-					{
-						vertices[edge_update.source].capacity -= edges_per_page;
-					}
-					else
-					{
-						atomicOr(&(memory_manager->error_code), static_cast<unsigned int>(ErrorCode::PAGE_QUEUE_FULL));
-					}
-	#endif
+	//#ifdef QUEUING
+	//				if (memory_manager->d_page_queue.enqueue(edge_block_index))
+	//				{
+	//					vertices[edge_update.source].capacity -= edges_per_page;
+	//				}
+	//				else
+	//				{
+	//					atomicOr(&(memory_manager->error_code), static_cast<unsigned int>(ErrorCode::PAGE_QUEUE_FULL));
+	//				}
+	//#endif
+                                            vertices[edge_update.source].capacity -= edges_per_page;
+                                            free(edge_block);
 					}
 				}
 
@@ -611,7 +615,7 @@ namespace faimGraphEdgeDeletion
 
 				break;
 				}
-				adjacency_iterator.advanceIteratorDeletionCompaction(i, edges_per_page, memory, page_size, memory_manager->start_index, edge_block_index, search_iterator, shuffle_index);
+				adjacency_iterator.advanceIteratorDeletionCompaction(i, edges_per_page, memory, page_size, memory_manager->start_index, edge_block, search_iterator, shuffle_index);
 			}
 			}
 
@@ -658,6 +662,7 @@ void EdgeUpdateManager<VertexDataType, EdgeDataType, UpdateDataType>::deviceEdge
   {
     faimGraphEdgeDeletion::d_edgeDeletion<VertexDataType, EdgeDataType, UpdateDataType> << < grid_size, block_size >> > ((MemoryManager*)memory_manager->d_memory,
                                                                                                   memory_manager->d_data,
+                                                                                                  (memory_t *) (((size_t) memory_manager->d_data) + memory_manager->total_memory),
                                                                                                   memory_manager->page_size,
                                                                                                   updates->d_edge_update,
                                                                                                   batch_size,
@@ -736,6 +741,7 @@ void EdgeUpdateManager<VertexDataType, EdgeDataType, UpdateDataType>::w_edgeDele
 {
 	faimGraphEdgeDeletion::d_edgeDeletion<VertexDataType, EdgeDataType, UpdateDataType> << < grid_size, block_size, 0, stream >> > ((MemoryManager*)memory_manager->d_memory,
                                                                                                             memory_manager->d_data,
+                                                                                                            (memory_t *) (((size_t) memory_manager->d_data) + memory_manager->total_memory),
                                                                                                             memory_manager->page_size,
                                                                                                             updates_deletion->d_edge_update,
                                                                                                             batch_size,

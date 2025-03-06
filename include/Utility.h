@@ -767,12 +767,35 @@ public:
     }
   }
 
+  __forceinline__ __device__ void advanceIteratorDeletionCompaction(int& loop_index, vertex_t& edges_per_page, memory_t*& memory, int& page_size, uint64_t& start_index, EdgeDataType *&edge_block, AdjacencyIterator<EdgeDataType>& search_list, vertex_t& shuffle_index)  {
+    ++iterator;
+    if (((loop_index) % (edges_per_page)) == (edges_per_page - 1))
+    {
+      // Edgeblock is full, place pointer to next block, reset adjacency_list pointer to next block
+      edge_block = *((EdgeDataType **) iterator);
+      pointerHandlingTraverse(iterator, memory, page_size, edges_per_page, start_index);
+      search_list.setIterator(iterator);
+      shuffle_index -= edges_per_page;
+    }
+  }
+
   __forceinline__ __device__ void advanceIteratorToIndex(vertex_t& edges_per_page, memory_t*& memory, int& page_size, uint64_t& start_index, index_t& edge_block_index, vertex_t& shuffle_index)
   {
     while (shuffle_index >= edges_per_page)
     {
       iterator += edges_per_page;
       edge_block_index = getPageIndex(edges_per_page);
+      pointerHandlingTraverse(iterator, memory, page_size, edges_per_page, start_index);
+      shuffle_index -= edges_per_page;
+    }
+  }
+
+  __forceinline__ __device__ void advanceIteratorToIndex(vertex_t& edges_per_page, memory_t*& memory, int& page_size, uint64_t& start_index, EdgeDataType *&edge_block, vertex_t& shuffle_index)
+  {
+    while (shuffle_index >= edges_per_page)
+    {
+      iterator += edges_per_page;
+      edge_block = *((EdgeDataType **) iterator);
       pointerHandlingTraverse(iterator, memory, page_size, edges_per_page, start_index);
       shuffle_index -= edges_per_page;
     }

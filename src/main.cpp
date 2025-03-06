@@ -259,13 +259,13 @@ void testrunImplementation(const std::shared_ptr<Config>& config, const std::uni
 				faimGraph->edge_update_manager->receiveEdgeUpdates(std::move(realistic_edge_updates), EdgeUpdateVersion::GENERAL);
           }
           
-          //start_clock(ce_start, ce_stop);
-          //
-	  //      	 faimGraph->edgeDeletion();
-          //
-          //time_diff = end_clock(ce_start, ce_stop);
-          //if(i >= warmup_rounds)
-          //  time_elapsed_edgedeletion += time_diff;
+          start_clock(ce_start, ce_stop);
+          
+	        	 faimGraph->edgeDeletion();
+          
+          time_diff = end_clock(ce_start, ce_stop);
+          if(i >= warmup_rounds)
+            time_elapsed_edgedeletion += time_diff;
 
           //------------------------------------------------------------------------------
           // Verification phase
