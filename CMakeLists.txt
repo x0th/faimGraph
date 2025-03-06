@@ -123,83 +123,83 @@ add_executable(main
           src/main.cpp
            )
 
-add_executable(reInitTC 
-          src/tests/reInitTC.cpp
-           )
-
-add_executable(STC 
-          src/algorithms/STC.cpp
-		  include/algorithms/STC.h
-		  include/algorithms/STC.cuh
-           )
-
-add_executable(BFS 
-          src/algorithms/BFS.cpp
-		  		include/algorithms/BFS.h
-		  		src/algorithms/BFS.cu
-					 )
-					 
-# Enable Device launches for DP
-set_property(TARGET BFS PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-
-add_executable(CCoeff
-          src/algorithms/ClusteringCoefficients.cpp
-		  include/algorithms/ClusteringCoefficients.h 
-		  include/algorithms/ClusteringCoefficients.cuh 
-           )
-
-add_executable(CComp
-          src/algorithms/ConnectedComponents.cpp
-		  include/algorithms/ConnectedComponents.h 
-           )
-
-add_executable(BC 
-          src/algorithms/BetweennessCentrality.cpp
-		  include/algorithms/BetweennessCentrality.h 
-           )
-
-add_executable(PR
-          src/algorithms/PR.cpp
-		  include/algorithms/PageRank.h 
-		  include/algorithms/PageRank.cuh 
-           )
-
-add_executable(continuousTC
-          src/tests/ContinuousTC.cpp
-           )
-
-add_executable(dynamicVertices 
-          src/tests/dynamicVerticesMain.cpp
-           )
-
-add_executable(concurrentTC
-          src/tests/concurrentTC.cpp
-           )
-
-add_executable(queryTC
-          src/tests/queryTC.cpp
-           )
-
-add_executable(spmv 
-          src/tests/SpMV.cpp
-           )
+#add_executable(reInitTC 
+#          src/tests/reInitTC.cpp
+#           )
+#
+#add_executable(STC 
+#          src/algorithms/STC.cpp
+#		  include/algorithms/STC.h
+#		  include/algorithms/STC.cuh
+#           )
+#
+#add_executable(BFS 
+#          src/algorithms/BFS.cpp
+#		  		include/algorithms/BFS.h
+#		  		src/algorithms/BFS.cu
+#					 )
+#					 
+## Enable Device launches for DP
+#set_property(TARGET BFS PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+#
+#add_executable(CCoeff
+#          src/algorithms/ClusteringCoefficients.cpp
+#		  include/algorithms/ClusteringCoefficients.h 
+#		  include/algorithms/ClusteringCoefficients.cuh 
+#           )
+#
+#add_executable(CComp
+#          src/algorithms/ConnectedComponents.cpp
+#		  include/algorithms/ConnectedComponents.h 
+#           )
+#
+#add_executable(BC 
+#          src/algorithms/BetweennessCentrality.cpp
+#		  include/algorithms/BetweennessCentrality.h 
+#           )
+#
+#add_executable(PR
+#          src/algorithms/PR.cpp
+#		  include/algorithms/PageRank.h 
+#		  include/algorithms/PageRank.cuh 
+#           )
+#
+#add_executable(continuousTC
+#          src/tests/ContinuousTC.cpp
+#           )
+#
+#add_executable(dynamicVertices 
+#          src/tests/dynamicVerticesMain.cpp
+#           )
+#
+#add_executable(concurrentTC
+#          src/tests/concurrentTC.cpp
+#           )
+#
+#add_executable(queryTC
+#          src/tests/queryTC.cpp
+#           )
+#
+#add_executable(spmv 
+#          src/tests/SpMV.cpp
+#           )
 
 ##########################################################################
 # Link libraries
 target_link_libraries(main faimgraph)
-target_link_libraries(STC faimgraph)
-if(WIN32)
-	target_link_libraries(BFS faimgraph cudadevrt.lib)
-else()
-	target_link_libraries(BFS faimgraph)
-endif()
-target_link_libraries(CCoeff faimgraph)
-target_link_libraries(CComp faimgraph)
-target_link_libraries(BC faimgraph)
-target_link_libraries(PR faimgraph)
-target_link_libraries(continuousTC faimgraph)
-target_link_libraries(dynamicVertices faimgraph)
-target_link_libraries(concurrentTC faimgraph)
-target_link_libraries(queryTC faimgraph)
-target_link_libraries(spmv faimgraph)
-target_link_libraries(reInitTC faimgraph)
+#target_link_libraries(STC faimgraph)
+#if(WIN32)
+#	target_link_libraries(BFS faimgraph cudadevrt.lib)
+#else()
+#	target_link_libraries(BFS faimgraph)
+#endif()
+#target_link_libraries(CCoeff faimgraph)
+#target_link_libraries(CComp faimgraph)
+#target_link_libraries(BC faimgraph)
+#target_link_libraries(PR faimgraph)
+#target_link_libraries(continuousTC faimgraph)
+#target_link_libraries(dynamicVertices faimgraph)
+#target_link_libraries(concurrentTC faimgraph)
+#target_link_libraries(queryTC faimgraph)
+#target_link_libraries(spmv faimgraph)
+#target_link_libraries(reInitTC faimgraph)

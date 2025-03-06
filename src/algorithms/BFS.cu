@@ -73,7 +73,7 @@ namespace faimGraphBFS
 	}
 
     template <typename VertexDataType, typename EdgeDataType, size_t THREADS_PER_BLOCK>
-	__global__ void d_bfsBasic(MemoryManager* memory_manager, memory_t* memory, int page_size, int *found_new_nodes, vertex_t *frontier, vertex_t start_node)
+	__host__ void d_bfsBasic(MemoryManager* memory_manager, memory_t* memory, int page_size, int *found_new_nodes, vertex_t *frontier, vertex_t start_node)
 	{
 		frontier[start_node] = 0;
 
@@ -232,13 +232,23 @@ namespace faimGraphBFS
 		d_FillFrontierQueue<THREADS_PER_BLOCK>(newFrontierQueue, thread_frontier, n_frontier_nodes);
 	}
 
+        __global__ void allocate_kernel(dFrontierQueue *queue, unsigned int n_nodes) {
+                queue->Allocate(n_nodes);
+        }
+
+        __global__ void reset_kernel(dFrontierQueue *queue) {
+            queue->Reset();
+        }
+
 	template<typename VertexDataType, typename EdgeDataType, size_t EDGES_PER_THREAD, size_t THREADS_PER_BLOCK>
-	__global__ void d_bfsDynamicParalellism(MemoryManager *memory_manager, memory_t *memory, int page_size, vertex_t *frontiers,
+	__host__ void d_bfsDynamicParalellism(MemoryManager *memory_manager, memory_t *memory, int page_size, vertex_t *frontiers,
 		dFrontierQueue newFrontierQueue, dFrontierQueue oldFrontierQueue, vertex_t start_node)
 	{
 		frontiers[start_node] = 0;
-		newFrontierQueue.Allocate(1);
+		//newFrontierQueue.Allocate(1);
+                allocate_kernel<<<1, 1>>>(&newFrontierQueue, 1);
 		newFrontierQueue.nodes[0] = start_node;
+                cudaDeviceSynchronize();
 
 		int iteration = 0;
 		do
@@ -246,7 +256,9 @@ namespace faimGraphBFS
 			auto temp = oldFrontierQueue;
 			oldFrontierQueue = newFrontierQueue;
 			newFrontierQueue = temp;
-			newFrontierQueue.Reset();
+			//newFrontierQueue.Reset();
+                        reset_kernel<<<1, 1>>>(&newFrontierQueue);
+			cudaDeviceSynchronize();
 
 			d_bfsDynamicParalellismIteration<VertexDataType, EdgeDataType, EDGES_PER_THREAD, THREADS_PER_BLOCK>
 				<< <(*oldFrontierQueue.size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >> >
@@ -364,23 +376,30 @@ namespace faimGraphBFS
 		}
 	}
 
+
 	template<typename VertexDataType, typename EdgeDataType, size_t EDGES_PER_THREAD, size_t THREADS_PER_BLOCK>
-	__global__ void d_BFSPreprocessing(MemoryManager *memory_manager, memory_t *memory, int page_size, vertex_t *frontiers,
+	__host__ void d_BFSPreprocessing(MemoryManager *memory_manager, memory_t *memory, int page_size, vertex_t *frontiers,
 		dFrontierQueue rawFrontier,	dFrontierQueue smallNodesFrontier, dFrontierQueue mediumNodesFrontier, 
 		dFrontierQueue largeNodesFrontier, dFrontierQueue hugeNodesFrontier, vertex_t *current_max_node_size, vertex_t start_node)
 	{
 		size_t const EDGES_PER_BLOCK = THREADS_PER_BLOCK * EDGES_PER_THREAD;
 
 		frontiers[start_node] = 0;
-		rawFrontier.Allocate(1);
+                allocate_kernel<<<1, 1>>>(&rawFrontier, 1);
+		//rawFrontier.Allocate(1);
 		rawFrontier.nodes[0] = start_node;
+                cudaDeviceSynchronize();
 
 		unsigned int iteration = 0;
 		while (*rawFrontier.size > 0)
 		{
-			smallNodesFrontier.Reset();
-			mediumNodesFrontier.Reset();
-			largeNodesFrontier.Reset();
+                        reset_kernel<<<1, 1>>>(&smallNodesFrontier);
+                        reset_kernel<<<1, 1>>>(&mediumNodesFrontier);
+                        reset_kernel<<<1, 1>>>(&largeNodesFrontier);
+                        cudaDeviceSynchronize();
+			//smallNodesFrontier.Reset();
+			//mediumNodesFrontier.Reset();
+			//largeNodesFrontier.Reset();
 			//printf("Iteration %u, %u nodes\n", iteration, *rawFrontier.size);
 			d_ClassifyNodes_kernel<VertexDataType, THREADS_PER_BLOCK, EDGES_PER_THREAD, EDGES_PER_THREAD>
 				<< <(*rawFrontier.size + EDGES_PER_BLOCK - 1) / EDGES_PER_BLOCK, THREADS_PER_BLOCK >> >
@@ -389,7 +408,9 @@ namespace faimGraphBFS
 
 			//printf("Queue sizes: %u, %u, %u\n", *smallNodesFrontier.size, *mediumNodesFrontier.size, *largeNodesFrontier.size);
 
-			rawFrontier.Reset();
+                        reset_kernel<<<1, 1>>>(&rawFrontier);
+                        cudaDeviceSynchronize();
+			//rawFrontier.Reset();
 
 			if (*hugeNodesFrontier.size > 0)
 			{
@@ -657,16 +678,18 @@ namespace faimGraphBFS
 		}
 	}
 
-	__device__
+	__global__
 		void d_SwapQueues(dFrontierQueue &queue1, dFrontierQueue &queue2)
 	{
 		dFrontierQueue temp = queue1;
 		queue1 = queue2;
 		queue2 = temp;
+                
+                reset_kernel<<<1, 1>>>(&queue1);
 	}
 
 	template<typename VertexDataType, typename EdgeDataType, size_t EDGES_PER_THREAD, size_t THREADS_PER_BLOCK>
-	__global__
+	__host__
 		void d_bfsClassification(MemoryManager *memory_manager, memory_t *memory, int page_size, vertex_t *frontiers,
 			dFrontierQueue newSmallNodesFrontier, dFrontierQueue newMediumNodesFrontier,
 			dFrontierQueue newLargeNodesFrontier, dFrontierQueue newHugeNodesFrontier, 
@@ -681,38 +704,44 @@ namespace faimGraphBFS
 		unsigned int n_edges = vertices[starting_node].neighbours;
 		if (n_edges <= EDGES_PER_THREAD)
 		{
-			newSmallNodesFrontier.Allocate(1);
+                        allocate_kernel<<<1, 1>>>(&newSmallNodesFrontier, 1);
+			//newSmallNodesFrontier.Allocate(1);
 			newSmallNodesFrontier.nodes[0] = starting_node;
 		}
 		else if (n_edges <= EDGES_PER_THREAD * 32)
 		{
-			newMediumNodesFrontier.Allocate(1);
+                        allocate_kernel<<<1, 1>>>(&newMediumNodesFrontier, 1);
+			//newMediumNodesFrontier.Allocate(1);
 			newMediumNodesFrontier.nodes[0] = starting_node;
 		}
 		else if (n_edges <= EDGES_PER_BLOCK)
 		{
-			newLargeNodesFrontier.Allocate(1);
+                        allocate_kernel<<<1, 1>>>(&newLargeNodesFrontier, 1);
+			//newLargeNodesFrontier.Allocate(1);
 			newLargeNodesFrontier.nodes[0] = starting_node;
 		}
 		else
 		{
-			newHugeNodesFrontier.Allocate(1);
+                        allocate_kernel<<<1, 1>>>(&newHugeNodesFrontier, 1);
+			//newHugeNodesFrontier.Allocate(1);
 			newHugeNodesFrontier.nodes[0] = starting_node;
 		}
+                cudaDeviceSynchronize();
 
 		unsigned int iteration = 0;
 
 		do
 		{
 			//printf("iteration %u\n", iteration);
-			d_SwapQueues(newSmallNodesFrontier, oldSmallNodesFrontier);
-			newSmallNodesFrontier.Reset();
-			d_SwapQueues(newMediumNodesFrontier, oldMediumNodesFrontier);
-			newMediumNodesFrontier.Reset();
-			d_SwapQueues(newLargeNodesFrontier, oldLargeNodesFrontier);
-			newLargeNodesFrontier.Reset();
-			d_SwapQueues(newHugeNodesFrontier, oldHugeNodesFrontier);
-			newHugeNodesFrontier.Reset();
+			d_SwapQueues<<<1, 1>>>(newSmallNodesFrontier, oldSmallNodesFrontier);
+			//newSmallNodesFrontier.Reset();
+			d_SwapQueues<<<1, 1>>>(newMediumNodesFrontier, oldMediumNodesFrontier);
+			//newMediumNodesFrontier.Reset();
+			d_SwapQueues<<<1, 1>>>(newLargeNodesFrontier, oldLargeNodesFrontier);
+			//newLargeNodesFrontier.Reset();
+			d_SwapQueues<<<1, 1>>>(newHugeNodesFrontier, oldHugeNodesFrontier);
+			//newHugeNodesFrontier.Reset();
+                        cudaDeviceSynchronize();
 
 			//printf("Queue sizes: %u, %u, %u, %u\n", *data.oldSmallNodesFrontier.size, *data.oldMediumNodesFrontier.size, *data.oldLargeNodesFrontier.size, *data.oldHugeNodesFrontier.size);
 			if (*oldHugeNodesFrontier.size > 0)
@@ -787,7 +816,7 @@ std::vector<vertex_t> BFS<VertexDataType, EdgeDataType>::algBFSBasic(const std::
 	float allocation_time = end_clock(start_allocation, end_allocation);
 
 	start_clock(start_kernel, end_kernel);
-	faimGraphBFS::d_bfsBasic <VertexDataType, EdgeDataType, 256> <<<1, 1>>>
+	faimGraphBFS::d_bfsBasic <VertexDataType, EdgeDataType, 256>
 		((MemoryManager*)memory_manager->d_memory, memory_manager->d_data, memory_manager->page_size, dev_found_new_nodes, dev_frontier, start_vertex);
 	float kernel_time = end_clock(start_kernel, end_kernel);
 
@@ -830,7 +859,7 @@ std::vector<vertex_t> BFS<VertexDataType, EdgeDataType>::algBFSDynamicParalellis
 	float allocation_time = end_clock(start_allocation, end_allocation);
 
 	start_clock(start_kernel, end_kernel);
-	faimGraphBFS::d_bfsDynamicParalellism <VertexDataType, EdgeDataType, 64, 256> << <1, 1 >> >
+	faimGraphBFS::d_bfsDynamicParalellism <VertexDataType, EdgeDataType, 64, 256>
 		((MemoryManager*)memory_manager->d_memory, memory_manager->d_data, memory_manager->page_size, dev_frontier,
 			newFrontierQueue, oldFrontierQueue, start_vertex);
 	float kernel_time = end_clock(start_kernel, end_kernel);
@@ -879,7 +908,7 @@ std::vector<vertex_t> BFS<VertexDataType, EdgeDataType>::algBFSPreprocessing(con
 	float allocation_time = end_clock(start_allocation, end_allocation);
 
 	start_clock(start_kernel, end_kernel);
-	faimGraphBFS::d_BFSPreprocessing<VertexDataType, EdgeDataType, 4, 128> << <1, 1 >> >
+	faimGraphBFS::d_BFSPreprocessing<VertexDataType, EdgeDataType, 4, 128> 
 		((MemoryManager*)memory_manager->d_memory, memory_manager->d_data, memory_manager->page_size, dev_frontier,
 			rawFrontierQueue, smallNodesQueue, mediumNodesQueue, largeNodesQueue, hugeNodesQueue, current_max_node_size, start_vertex);
 	float kernel_time = end_clock(start_kernel, end_kernel);
@@ -933,7 +962,7 @@ std::vector<vertex_t> BFS<VertexDataType, EdgeDataType>::algBFSClassification(co
 	float allocation_time = end_clock(start_allocation, end_allocation);
 
 	start_clock(start_kernel, end_kernel);
-	faimGraphBFS::d_bfsClassification<VertexDataType, EdgeDataType, 16, 256> << <1, 1 >> >
+	faimGraphBFS::d_bfsClassification<VertexDataType, EdgeDataType, 16, 256>
 		((MemoryManager*)memory_manager->d_memory, memory_manager->d_data, memory_manager->page_size, dev_frontier,
 			newSmallNodesQueue, newMediumNodesQueue, newLargeNodesQueue, newHugeNodesQueue,
 			oldSmallNodesQueue, oldMediumNodesQueue, oldLargeNodesQueue, oldHugeNodesQueue,
